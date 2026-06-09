@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Our Baby Moon</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --bg:#f4ece0; --panel:#fbf6ee; --ink:#2e2620; --muted:#7a6f63;
+  --line:#e2d6c4; --amber:#c0822c; --amber-d:#9c6618; --forest:#4a6149;
+  --sea:#3c6e84; --card:#ffffff; --shadow:0 1px 3px rgba(60,42,20,.10),0 8px 24px rgba(60,42,20,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--amber-d);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px 64px}
+header.top{padding:38px 22px 22px;max-width:1180px;margin:0 auto}
+.kicker{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber-d);font-weight:700}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:34px;margin:.18em 0 .12em;font-weight:700}
+.sub{color:var(--muted);font-size:15px;max-width:760px}
+.window{display:inline-block;margin-top:12px;font-size:13px;color:var(--forest);
+  background:#e9efe5;border:1px solid #d3e0cc;border-radius:999px;padding:4px 13px;font-weight:600}
+
+/* top tabs */
+.tabs{display:flex;gap:6px;margin:26px 0 0}
+.tab{flex:1 1 0;min-width:0;cursor:pointer;border:1px solid var(--line);background:var(--panel);
+  padding:9px 16px;border-radius:12px 12px 0 0;font-weight:700;font-size:15.5px;color:var(--muted);
+  border-bottom:none}
+.tab .tlab{display:flex;flex-direction:column;line-height:1.2}
+.tab .thint{font-size:10.5px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;white-space:normal}
+.tab.active{background:var(--card);color:var(--ink);box-shadow:0 -2px 8px rgba(60,42,20,.05)}
+.tgcol{min-width:0}
+@media(max-width:560px){
+  .tab{padding:8px 11px;font-size:13.5px}
+  .tab .thint{font-size:9px}
+}
+.tabpane{display:none;background:var(--card);border:1px solid var(--line);border-radius:0 14px 14px 14px;
+  padding:20px;box-shadow:var(--shadow)}
+.tabpane.active{display:block}
+.wrap.flat .tabpane{border-radius:14px;margin-top:8px}
+.panesub{font-size:13px;color:var(--muted);font-style:italic;margin:-2px 0 14px}
+
+/* sub-tabs (place pills) */
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:16px}
+.pill{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:999px;
+  padding:7px 15px;font-size:13.5px;font-weight:600;color:var(--ink);transition:.12s}
+.pill:hover{border-color:var(--amber)}
+.pill.active{background:var(--amber);border-color:var(--amber);color:#fff}
+.pill .nf{opacity:.6;font-weight:500;font-style:italic}
+
+.card{display:none}
+.card.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* photo strip */
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  border-radius:12px;overflow:hidden;margin-bottom:18px}
+.gallery figure{margin:0;position:relative;overflow:hidden;background:#e7ddcd;height:200px}
+.gallery img{width:100%;height:100%;object-fit:cover;display:block;transition:.4s}
+.gallery figure:hover img{transform:scale(1.05)}
+.gallery figcaption{position:absolute;left:0;right:0;bottom:0;font-size:11px;color:#fff;
+  padding:16px 10px 7px;background:linear-gradient(transparent,rgba(0,0,0,.66));line-height:1.3}
+@media(max-width:820px){.gallery{grid-template-columns:1fr 1fr}.gallery figure{height:150px}}
+
+.hl{font-family:Georgia,serif;font-size:25px;margin:2px 0 2px}
+.oneliner{color:var(--muted);font-size:15.5px;font-style:italic;margin-bottom:18px}
+
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}.gallery{grid-template-columns:1fr 1fr}}
+h3.sec{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-d);
+  margin:0 0 10px;font-weight:700}
+
+.festival{background:#fbf3e4;border:1px solid #ecdcbd;border-left:4px solid var(--amber);
+  border-radius:10px;padding:14px 16px;margin-bottom:20px}
+.festival .fname{font-weight:700;font-size:16px}
+.festival .fmeta{font-size:13px;color:var(--amber-d);font-weight:600;margin:2px 0 7px}
+.festival .fblurb{font-size:14px;color:var(--ink)}
+.festival.none{background:#f1eee8;border-left-color:#bcae99}
+.festival.none .fname{color:var(--muted)}
+
+/* two-week rhythm strip */
+.plan{background:#eef3ea;border:1px solid #d3e0cc;border-radius:10px;padding:11px 15px;margin-bottom:20px;font-size:13.5px;line-height:1.5}
+.plan b{color:var(--forest);letter-spacing:.04em}
+
+/* points of interest (must-have + hidden gems) */
+.poi{list-style:none;margin:0 0 16px;padding:0}
+.poi li{position:relative;padding:7px 0 7px 22px;font-size:14px;border-bottom:1px dashed var(--line)}
+.poi li:last-child{border-bottom:none}
+.poi li:before{content:"";position:absolute;left:3px;top:13px;width:7px;height:7px;border-radius:50%;background:var(--forest)}
+.poi.gems li:before{background:var(--amber);border-radius:1px;transform:rotate(45deg);top:12px}
+.poi li b{font-weight:700}
+.poi li .w{color:var(--muted)}
+.subsec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin:0 0 7px;color:var(--forest);display:flex;align-items:center;gap:6px}
+.subsec.gem{color:var(--amber-d)}
+
+/* bases to stay */
+.base{border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:9px;background:var(--panel)}
+.base .bname{font-weight:700;font-size:14.5px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.vibe{font-size:11px;font-weight:600;color:var(--sea);background:#e7eff2;border:1px solid #cfe0e6;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.base .bwhy{font-size:13px;color:var(--ink);margin-top:4px}
+
+/* fit block — why it suits you */
+.fit{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--forest);
+  border-radius:10px;padding:13px 16px;margin-bottom:20px}
+.fit h3.sec{margin-bottom:9px}
+.fitrow{font-size:13.5px;line-height:1.45;padding:5px 0 5px 9px;border-left:3px solid transparent}
+.fitrow + .fitrow{border-top:1px dashed var(--line)}
+.fitrow.lead{border-left-color:var(--amber)}
+.fitrow.lead .ftext{font-weight:700}
+.ficon{margin-right:5px}
+.flabel{color:var(--muted);font-weight:600;font-size:12px}
+.flabel:after{content:" — "}
+
+/* glance ribbon */
+.ribbon{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 20px}
+.ratom{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 13px;
+  font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+.ratom .re{font-size:14px}
+
+/* cost total + festival genre detail */
+.ctotal{font-weight:700;font-size:15px;color:var(--amber-d);margin-bottom:8px;line-height:1.35}
+.ctotal .ctl{display:block;font-size:11px;font-weight:500;color:var(--muted)}
+.szd{font-size:11.5px;color:var(--muted);font-style:italic}
+.mi.caveat b{color:#a3432e}
+
+/* map */
+.mapsec{margin-bottom:20px}
+.cardmap{height:260px;border-radius:12px;border:1px solid var(--line);overflow:hidden;z-index:0}
+.maplegend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.maplegend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid #fff;
+  box-shadow:0 0 0 1px var(--line);margin-right:5px;vertical-align:middle}
+.leaflet-container{font:inherit}
+
+/* top grid: fit + facts side by side */
+.topgrid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start;margin-bottom:20px}
+.topgrid .fit{margin-bottom:0}
+@media(max-width:820px){.topgrid{grid-template-columns:1fr}}
+.bxh{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-d);font-weight:700}
+.wbox,.cbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+.cbox{margin-top:12px}
+.tbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin-top:12px}
+.tbox .trow{padding:7px 0;border-bottom:1px dashed var(--line)}
+.tbox .trow:last-of-type{border-bottom:none}
+.tbox .tk{display:block;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--amber-d);font-weight:700;margin-bottom:2px}
+.tbox .tval{font-size:12.5px;line-height:1.4}
+.tbox .tverdict{margin-top:9px;border-top:1px solid var(--line);padding-top:8px;font-size:12.5px;font-style:italic;color:var(--forest)}
+.wtiles{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.wtile{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 5px;text-align:center}
+.wtile .we{font-size:23px;line-height:1}
+.wtile .wv{font-weight:700;font-size:13.5px;margin-top:4px}
+.wtile .wl{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.2}
+.wcap{font-size:12px;color:var(--muted);font-style:italic;margin-top:9px;text-align:center}
+.ctab{width:100%;border-collapse:collapse;font-size:13px}
+.ctab td{padding:6px 3px;border-bottom:1px dashed var(--line);vertical-align:top}
+.ctab tr:last-child td{border-bottom:none}
+.ctab .ci{width:20px;font-size:15px}
+.ctab .cl{color:var(--muted);white-space:nowrap}
+.ctab .cv{font-weight:600;text-align:right;padding-left:8px}
+
+/* festivals */
+.fests{margin:20px 0}
+.fest.anchor{background:#fbf3e4;border:1px solid #ecdcbd;border-left:4px solid var(--amber);
+  border-radius:10px;padding:12px 15px;margin-bottom:12px}
+.fest.anchor .fname{font-weight:700;font-size:15.5px}
+.fest.anchor .fmeta{font-size:12.5px;color:var(--amber-d);font-weight:600;margin:2px 0 6px}
+.fest.anchor .fblurb{font-size:13.5px}
+.festrow{font-size:13px;line-height:1.45;padding:6px 0;border-bottom:1px dashed var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.festrow:last-child{border-bottom:none}
+.festrow .fn{font-weight:700}
+.festrow .fd{color:var(--muted)}
+.sz{font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.sz.velky{background:#f6e0db;color:#a3432e;border:1px solid #e8c4bb}
+.sz.stredni{background:#fbeed3;color:#9c6618;border:1px solid #ecdcbd}
+.sz.maly{background:#e6efe2;color:#3f5a3c;border:1px solid #d3e0cc}
+
+/* camping */
+.camp{margin:20px 0 0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 16px}
+.campstatus{font-weight:700;font-size:14px;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.campstatus .cb{width:11px;height:11px;border-radius:50%}
+.campstatus.ano .cb{background:var(--forest)} .campstatus.ano{color:var(--forest)}
+.campstatus.ne .cb{background:#a3432e} .campstatus.ne{color:#a3432e}
+.campstatus.castecne .cb{background:var(--amber)} .campstatus.castecne{color:var(--amber-d)}
+.camprules{font-size:13px;color:var(--ink);margin-bottom:9px}
+.campspot{font-size:13px;padding:4px 0 4px 20px;position:relative}
+.campspot:before{content:"⛺";position:absolute;left:0;top:3px;font-size:12px}
+.campspot b{font-weight:700}
+
+/* decision details (full-width) */
+.detailsec{margin:20px 0 0}
+.details{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:820px){.details{grid-template-columns:1fr}}
+.dcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.dcard .dk{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--amber-d);font-weight:700;margin-bottom:4px}
+.dcard .dv{font-size:13px;line-height:1.45}
+
+.meta-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.meta-row .mi{flex:1;min-width:220px;font-size:13px}
+.meta-row .mi b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+footer{max-width:1180px;margin:30px auto 0;padding:0 22px;color:var(--muted);font-size:12.5px}
+</style></head>
+<body>
+<header class="top">
+  <div class="kicker">Dovolená · plánování</div>
+  <h1>Our Baby Moon</h1>
+  <div class="sub">Užší výběr · 5 tras</div>
+  <div class="window">Okno 3.–19. 7. 2026</div>
+  
+</header>
+<div class="wrap flat">
+  
+  <div class="tabpane active" data-dir="ALL"><div class="pills"><div class="pill active" data-card="north-norway-helgeland" onclick="showCard('ALL','north-norway-helgeland')">Helgeland / Træna</div><div class="pill" data-card="north-norway" onclick="showCard('ALL','north-norway')">Lofoty / Tromsø</div><div class="pill" data-card="faroe" onclick="showCard('ALL','faroe')">Faerské ostrovy</div><div class="pill" data-card="nw-spain-combined" onclick="showCard('ALL','nw-spain-combined')">Severní Španělsko</div><div class="pill" data-card="west-ireland" onclick="showCard('ALL','west-ireland')">Západní Irsko</div></div>
+<div class="card active" data-card="north-norway-helgeland">
+  <div class="gallery"><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Seven-Sisters-2018.jpg/1280px-Seven-Sisters-2018.jpg" alt="Pásmo Sedmi sester vystupující z moře"><figcaption>Pásmo Sedmi sester vystupující z moře</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Torghatten_1.jpg/1280px-Torghatten_1.jpg" alt="Hora s přírodním tunelem skrz vrchol"><figcaption>Hora s přírodním tunelem skrz vrchol</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Vegavista.jpg/1280px-Vegavista.jpg" alt="Souostroví Vega na seznamu UNESCO"><figcaption>Souostroví Vega na seznamu UNESCO</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Lovund1.jpg/1280px-Lovund1.jpg" alt="Ptačí ostrov s koloniemi papuchalků"><figcaption>Ptačí ostrov s koloniemi papuchalků</figcaption></figure></div>
+  <div class="hl">Severní Norsko — Helgeland &amp; Træna</div>
+  <div class="oneliner">Ostrovní pobřeží pod půlnočním sluncem, festival v mořské jeskyni.</div>
+  <div class="ribbon"><span class="ratom"><span class="re">🌡️</span>~15 °C / ~9 °C</span><span class="ratom"><span class="re">💶</span>≈ 75–120 tis. Kč</span><span class="ratom"><span class="re">🎵</span>Trænafestivalen</span><span class="ratom"><span class="re">⛺</span>stan: ano</span><span class="ratom"><span class="re">🗺️</span>5 bází · ~220 km</span></div>
+  <div class="topgrid">
+    <div class="tgcol"><div class="fit"><h3 class="sec">Proč vám to sedne</h3><div class="fitrow"><span class="ficon">🏘</span><span class="flabel">Skutečný místní život</span><span class="ftext">Rybářské vísky na Dønně, Vega a Lovundu a lodní kultura Trænafestivalu.</span></div><div class="fitrow"><span class="ficon">🚗</span><span class="flabel">Volnost objevovat</span><span class="ftext">Skoky mezi ostrovy trajekty z Bodø a Sandnessjøenu, Norská turistická trasa Helgelandskysten.</span></div><div class="fitrow lead"><span class="ficon">⛰</span><span class="flabel">Příroda, kterou si dojdeš</span><span class="ftext">Štíty Sedmi sester z moře, hora s dírou Torghatten, ptačí útesy Lovundu, 14 000 ostrovů.</span></div><div class="fitrow"><span class="ficon">🎭</span><span class="flabel">Celý mix dohromady</span><span class="ftext">Scénické projížďky autem, klidné plavby lodí, mírné procházky — žádný náročný trek.</span></div><div class="fitrow"><span class="ficon">🍴</span><span class="flabel">Jídlo jako součást místa</span><span class="ftext">Čerstvé mořské plody z Helgelandu, losos z Kvarøy, harborové kavárny na Dønně a Herøy.</span></div></div><div class="fests"><h3 class="sec">Festivaly v okně</h3><div class="fest anchor"><div class="fname">🎵 Trænafestivalen <span class="sz maly">malý</span> <span class="szd">~2k</span></div><div class="fmeta">8.–11. 7. 2026 (předběžně) · ostrovy Træna</div><div class="fblurb">Koncert v majestátní mořské jeskyni Kirkehelleren na ostrově Sanna. <a href="https://www.trena.net/" target="_blank">web ↗</a></div></div><div class="festrow"><span class="sz stredni">střední</span><span class="fn">Parkenfestivalen</span><span class="fd">polovina srpna 2026 (mimo okno) · Bodø</span> <a href="https://parken.no/" target="_blank">↗</a></div><div class="festrow"><span class="sz stredni">střední</span><span class="fn">Verket Festival</span><span class="fd">konec léta 2026 (předběžně, mimo okno) · Mo i Rana</span> <a href="https://www.verketfestival.no/" target="_blank">↗</a></div></div></div>
+    <div class="tgcol"><div class="wbox"><h4 class="bxh">Počasí · začátek července</h4><div class="wtiles"><div class="wtile"><div class="we">🌡️</div><div class="wv">~15 °C</div><div class="wl">ve dne · noc ~9 °C</div></div><div class="wtile"><div class="we">🌧️</div><div class="wv">~7 / 14</div><div class="wl">deštivé dny</div></div><div class="wtile"><div class="we">🌂</div><div class="wv">střední, časté přeháňky</div><div class="wl">srážky</div></div><div class="wtile"><div class="we">🌅</div><div class="wv">~23 h</div><div class="wl">světlo (i soumrak)</div></div></div><div class="wcap">☀️ půlnoční slunce</div></div><div class="cbox"><h4 class="bxh">Náklady · bez luxusu</h4><div class="ctotal">≈ 75–120 tis. Kč<span class="ctl">/ pár / 2 týdny · letenky + auto + ubytování</span></div><table class="ctab"><tr><td class="ci">✈️</td><td class="cl">Letenka (zpát.)</td><td class="cv">~9–14 tis. Kč (Praha→Bodø přes Oslo)</td></tr><tr><td class="ci">🚗</td><td class="cl">Auto</td><td class="cv">~60–80 €/den</td></tr><tr><td class="ci">⛺</td><td class="cl">Kemp</td><td class="cv">~250–400 NOK/noc</td></tr><tr><td class="ci">🏨</td><td class="cl">Nocleh</td><td class="cv">rorbu/penzion ~3–5 tis. NOK</td></tr></table></div><div class="tbox"><h4 class="bxh">Cesta tam</h4><div class="trow"><span class="tk">✈️ Kam letět</span><div class="tval">Praha→Oslo (Norwegian, ~2 h), pak Oslo→Sandnessjøen (Widerøe, ~1h50) přímo; alternativa přes Bodø.</div></div><div class="trow"><span class="tk">💶 Zpáteční letenka</span><div class="tval">~6–10 tis. Kč/os (Praha↔Oslo 3–5 tis. + návazný Oslo↔Sandnessjøen 3–5,5 tis.)</div></div><div class="trow"><span class="tk">⏱️ Cesta tam (dveře-dveře)</span><div class="tval">Praha → Sandnessjøen ~7–9 h dveře-dveře (2 lety + přestup v Oslu)</div></div><div class="trow"><span class="tk">⚓ K festivalu / kotvě</span><div class="tval">Træna z pevniny člunem: ze Sandnessjøenu ~2,5 h, z Bodø v létě přímo ~1,5–2 h; trajekt přes Lovund zdarma. V létě extra spoje.</div></div><div class="tverdict">Logistika nesní moc času — báze na pevnině, Træna jako 2–3denní výlet člunem.</div></div><div class="camp"><h3 class="sec">Stan / kemp</h3><div class="campstatus ano"><span class="cb"></span>Kemping: povolen (i divoký)</div><div class="camprules">Allemannsrett: stan zdarma na nezemědělské půdě min. 150 m od domů, max. 2 noci.</div><div class="campspot"><b>Pláže na Vega / Dønna</b> — Bílé mušlové pláže s tyrkysovým mělčím a pásmem Sedmi sester na obzoru.</div><div class="campspot"><b>Okolí Torghattenu</b> — Tábor pod horou s dírou, snadný přístup k tunelu a moři.</div></div></div>
+  </div>
+  <div class="plan"><b>RYTMUS NA 2 TÝDNY · </b>Týden 1 jih (Brønnøysund/Vega/Torghatten), ~4h přejezd na sever do Sandnessjøenu (Sedm sester), pak trajekt na Træna na festival a Lovund.</div>
+  <div class="mapsec"><h3 class="sec">Mapa — rozložení míst</h3><div class="cardmap" id="map-north-norway-helgeland"></div><div class="maplegend"><span><span class="dot" style="background:#c0822c"></span>báze</span><span><span class="dot" style="background:#4a6149"></span>klíčové místo</span><span><span class="dot" style="background:#8a4fbe"></span>festival</span><span><span class="dot" style="background:#2f8f9d"></span>kemp</span></div></div>
+  <div class="grid">
+    <div>
+      <h3 class="sec">Kam zajet</h3>
+      <div class="subsec">★ Must-have</div>
+      <ul class="poi"><li><b>Trænafestivalen — jeskyně Kirkehelleren</b> — <span class="w">Koncert v 32 m vysoké mořské jeskyni na ostrově Sanna pod půlnočním sluncem — kotva celé cesty.</span></li><li><b>Torghatten</b> — <span class="w">Hora s 160 m dlouhým přírodním tunelem skrz vrchol; pohodlná 20min procházka dovnitř.</span></li><li><b>De syv søstre / Sedm sester</b> — <span class="w">Pásmo sedmi vrcholů přes 1000 m vyrůstajících přímo z moře u Sandnessjøenu; obdiv z lodi i břehu.</span></li><li><b>Vega — UNESCO a kajčí prachové peří</b> — <span class="w">Souostroví 6500 ostrůvků na seznamu UNESCO; 1500 let stará tradice ochrany kajek a sběru prachu.</span></li></ul>
+      <div class="subsec gem">◆ Skryté tipy</div>
+      <ul class="poi gems"><li><b>Lovund — ptačí ostrov</b> — <span class="w">Až 300 000 papuchalků hnízdí v útesech Lovundfjellet; návrat hejn z moře je nezapomenutelná podívaná.</span></li><li><b>Dønna a Dønnamannen</b> — <span class="w">Klidný ostrov s plážemi, kavárnami a výhledy na Sedm sester; samotný výstup nahoru lze vynechat.</span></li><li><b>Nordlandsekspressen (NEX1) Bodø–Sandnessjøen</b> — <span class="w">Pětihodinová rychločlunová cesta mezi ostrovy s možností vystoupit v každém přístavu.</span></li><li><b>Støtt</b> — <span class="w">Drobná ostrovní vesnička s rorbu a klidným pobřežním tichem mimo turistické proudy.</span></li></ul>
+    </div>
+    <div>
+      <h3 class="sec">Kde se usadit (báze)</h3>
+      <div class="base"><div class="bname">Træna<span class="vibe">festivalový ostrov</span></div><div class="bwhy">Srdce Trænafestivalu, jeskyně Kirkehelleren, půlnoční slunce nad mořem; jen trajektem, klidný rytmus.</div></div><div class="base"><div class="bname">Sandnessjøen<span class="vibe">pod Sedmi sestrami</span></div><div class="bwhy">Pohodlná základna s letištěm a nemocnicí přímo pod pásmem Sedmi sester; výchozí bod trajektů.</div></div><div class="base"><div class="bname">Brønnøysund<span class="vibe">brána Helgelandu</span></div><div class="bwhy">Jižní brána pobřeží u Torghattenu; dobré služby, výlety na Vega a do souostroví.</div></div><div class="base"><div class="bname">Lovund<span class="vibe">ptačí ostrov</span></div><div class="bwhy">Klidná ostrovní základna s papuchalky a útesy, ideální pro pomalé dny u moře.</div></div><div class="base"><div class="bname">Bodø<span class="vibe">město + letiště</span></div><div class="bwhy">Severní letecká brána s přímými lety z Osla, kultura a starty rychločlunů na Helgeland.</div></div>
+    </div>
+  </div>
+  <div class="detailsec"><h3 class="sec">Rozhodovací detaily</h3><div class="details"><div class="dcard"><div class="dk">🏥 Porodnice / péče</div><div class="dv">Sandnessjøen má nemocnici s porodnicí (Helgelandssykehuset). Træna je ostrov: jen legevakt + sanitní vrtulník na pevninu.</div></div><div class="dcard"><div class="dk">💰 Vše-v-ceně (2 týdny)</div><div class="dv">Hrubě ~110–160 tis. Kč na pár (lety, auto, trajekty, ubytování, jídlo, festival) — Norsko velmi drahé.</div></div><div class="dcard"><div class="dk">📅 Rezervovat brzy</div><div class="dv">Rezervovat hned: festivalpas + camping, rychločlun (reisnordland.no), ubytování na Træně. Auto-trajekt Stokkvågen nelze předem, málo míst.</div></div><div class="dcard"><div class="dk">🌧️ Déšť &amp; plán B</div><div class="dv">Pobřeží ~17 deštivých dní; slunce střídá déšť/mlhu. Plán B: nepromokavé vrstvy, muzea, kavárny, sauna, vnitrozemí (Mo i Rana).</div></div><div class="dcard"><div class="dk">🍽️ Jídlo (těhotenství OK)</div><div class="dv">Ano, výborně i bez raw: pečený losos, vařené krevety/krabi, rybí polévky, brambory. Vyhnout: sushi, gravlax, studeně uzený losos, nepasterované sýry.</div></div><div class="dcard"><div class="dk">🚗 Bez auta na začátku</div><div class="dv">Dává smysl. Træna i festival fungují bez aut (nech auto na pevnině). Začít bez auta v Sandnessjøenu/na Træně, auto až na road trip po Kystriksveien (R17).</div></div><div class="dcard"><div class="dk">👥 Přátelé v Bergenu</div><div class="dv">Bergen je daleko na JZ (~1075 km / let Widerøe BGO→SSJ). Napojit jako začátek/konec: přílet Bergen za přáteli → let nebo Hurtigruten na sever na Helgeland, návrat opačně.</div></div></div></div>
+  <div class="meta-row">
+    <div class="mi caveat"><b>Proč možná ne</b>Træna je jen trajektem a daleko od Lofot; spojit obě Norska v jednom okruhu znamená hodně přesunů. Festival koliduje s Riddu.</div>
+    <div class="mi"><b>Babymoon poznámka</b>Den ~15 °C, noc ~9 °C, mírný pohyb a krátké procházky; nemocnice Sandnessjøen i Bodø v dosahu.</div>
+  </div>
+</div>
+<div class="card" data-card="north-norway">
+  <div class="gallery"><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Reine_at_Reinefjorden%2C_2010_September.jpg/1280px-Reine_at_Reinefjorden%2C_2010_September.jpg" alt="Rybářská vesnice mezi fjordem a štíty"><figcaption>Rybářská vesnice mezi fjordem a štíty</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Henningsv%C3%A6r_marina_buildings.jpg/1280px-Henningsv%C3%A6r_marina_buildings.jpg" alt="Přístav rozprostřený přes ostrůvky"><figcaption>Přístav rozprostřený přes ostrůvky</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Hamnoey2016.jpg/1280px-Hamnoey2016.jpg" alt="Rudé rorbu chýše pod horami"><figcaption>Rudé rorbu chýše pod horami</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Fiordo_de_Troll%2C_Lofoten%2C_Noruega%2C_2019-09-05%2C_DD_66.jpg/1280px-Fiordo_de_Troll%2C_Lofoten%2C_Noruega%2C_2019-09-05%2C_DD_66.jpg" alt="Úzký fjord se strmými stěnami"><figcaption>Úzký fjord se strmými stěnami</figcaption></figure></div>
+  <div class="hl">Severní Norsko — Lofoty &amp; fjordy</div>
+  <div class="oneliner">Rudé rybářské chýše pod štíty, půlnoční slunce nad fjordy.</div>
+  <div class="ribbon"><span class="ratom"><span class="re">🌡️</span>~15 °C / ~11 °C</span><span class="ratom"><span class="re">💶</span>≈ 65–110 tis. Kč</span><span class="ratom"><span class="re">🎵</span>Riddu Riđđu</span><span class="ratom"><span class="re">⛺</span>stan: ano</span><span class="ratom"><span class="re">🗺️</span>5 bází · ~350 km</span></div>
+  <div class="topgrid">
+    <div class="tgcol"><div class="fit"><h3 class="sec">Proč vám to sedne</h3><div class="fitrow lead"><span class="ficon">🏘</span><span class="flabel">Skutečný místní život</span><span class="ftext">Rybářské vesnice Henningsvær a Nusfjord plus sámská kultura na Riddu Riđđu.</span></div><div class="fitrow"><span class="ficon">🚗</span><span class="flabel">Volnost objevovat</span><span class="ftext">Autem a lodí mezi fjordy: Trollfjord, pláže Unstad i půlnoční slunce kdykoli.</span></div><div class="fitrow lead"><span class="ficon">⛰</span><span class="flabel">Příroda, kterou si dojdeš</span><span class="ftext">Rorbu pod štíty v Reine, plavba Trollfjordem a velryby u Andenes — příroda z první ruky.</span></div><div class="fitrow"><span class="ficon">🎭</span><span class="flabel">Celý mix dohromady</span><span class="ftext">Sámský festival, umělecký Henningsvær, hipster Tromsø a k tomu fjordy — kultura i divočina.</span></div><div class="fitrow"><span class="ficon">🍴</span><span class="flabel">Jídlo jako součást místa</span><span class="ftext">Čerstvá treska a mořské plody z úlovku dne přímo v rorbu i přístavních restauracích.</span></div></div><div class="fests"><h3 class="sec">Festivaly v okně</h3><div class="fest anchor"><div class="fname">🎵 Riddu Riđđu <span class="sz stredni">střední</span> <span class="szd">~5k</span></div><div class="fmeta">8.–12. 7. 2026 · Manndalen, Kåfjord (Lyngenfjord)</div><div class="fblurb">Festival původních národů, sámská kultura a hudba. <a href="https://riddu.no/en" target="_blank">web ↗</a></div></div><div class="festrow"><span class="sz maly">malý</span><span class="fn">Lofoten International Chamber Music Festival</span><span class="fd">5.–12. 7. 2026 (předběžně) · Lofoty (Svolvær a okolí)</span> <a href="https://www.lofotenfestival.com/en" target="_blank">↗</a></div><div class="festrow"><span class="sz stredni">střední</span><span class="fn">Bukta Tromsø Open Air</span><span class="fd">17.–18. 7. 2026 · Telegrafbukta, Tromsø</span> <a href="https://www.bukta.no/en/" target="_blank">↗</a></div></div></div>
+    <div class="tgcol"><div class="wbox"><h4 class="bxh">Počasí · začátek července</h4><div class="wtiles"><div class="wtile"><div class="we">🌡️</div><div class="wv">~15 °C</div><div class="wl">ve dne · noc ~11 °C</div></div><div class="wtile"><div class="we">🌧️</div><div class="wv">~8 / 14</div><div class="wl">deštivé dny</div></div><div class="wtile"><div class="we">🌂</div><div class="wv">55–80 mm</div><div class="wl">srážky</div></div><div class="wtile"><div class="we">🌅</div><div class="wv">24 h</div><div class="wl">světlo (i soumrak)</div></div></div><div class="wcap">☀️ půlnoční slunce do ~17.7.</div></div><div class="cbox"><h4 class="bxh">Náklady · bez luxusu</h4><div class="ctotal">≈ 65–110 tis. Kč<span class="ctl">/ pár / 2 týdny · letenky + auto + ubytování</span></div><table class="ctab"><tr><td class="ci">✈️</td><td class="cl">Letenka (zpát.)</td><td class="cv">~5–8 tis. Kč (přes Oslo)</td></tr><tr><td class="ci">🚗</td><td class="cl">Auto</td><td class="cv">~700–1200 Kč/den</td></tr><tr><td class="ci">⛺</td><td class="cl">Kemp</td><td class="cv">~320 NOK/noc</td></tr><tr><td class="ci">🏨</td><td class="cl">Nocleh</td><td class="cv">rorbu 1700–3500 NOK</td></tr></table></div><div class="tbox"><h4 class="bxh">Cesta tam</h4><div class="trow"><span class="tk">✈️ Kam letět</span><div class="tval">Praha→Oslo→Tromsø (vždy přestup v Oslu; ~1h55 navazující let). Alt. Evenes/Bodø.</div></div><div class="trow"><span class="tk">💶 Zpáteční letenka</span><div class="tval">~7–12 tis. Kč/os v červenci (vrchol), mimo špičku od ~5,5 tis.</div></div><div class="trow"><span class="tk">⏱️ Cesta tam (dveře-dveře)</span><div class="tval">Praha → Tromsø ~8–10 h dveře-dveře (přestup v Oslu)</div></div><div class="trow"><span class="tk">⚓ K festivalu / kotvě</span><div class="tval">Riddu Riđđu (Manndalen) od Tromsø ~1,5–2 h autem — snadný výlet. ALE Tromsø↔Lofoty ~7–8 h autem / 3 h trajekt z Bodø.</div></div><div class="tverdict">Festival blízko, ale přejezd Tromsø↔Lofoty ukrojí celý den — hlavní žrout času.</div></div><div class="camp"><h3 class="sec">Stan / kemp</h3><div class="campstatus ano"><span class="cb"></span>Kemping: povolen (i divoký)</div><div class="camprules">Allemannsrett: divoký kemp povolen, min. 150 m od domu, max 2 noci, bez ohně v létě.</div><div class="campspot"><b>Kvalvika Beach (Lofoty)</b> — Travnaté duny za pláží, dostupné jen pěšky přes Ryten — divoká, ikonická.</div><div class="campspot"><b>Bunes Beach (Moskenesøya)</b> — Široká písečná pláž pod horami, jen trajektem a pěšky — klid a půlnoční slunce.</div></div></div>
+  </div>
+  <div class="plan"><b>RYTMUS NA 2 TÝDNY · </b>Týden 1 báze Tromsø + Manndalen (festival, Lyngen, Sommarøy); týden 2 přejezd na ostrovy — Andenes (velryby) → Henningsvær → Reine, s plavbami a vyhlídkovými jízdami.</div>
+  <div class="mapsec"><h3 class="sec">Mapa — rozložení míst</h3><div class="cardmap" id="map-north-norway"></div><div class="maplegend"><span><span class="dot" style="background:#c0822c"></span>báze</span><span><span class="dot" style="background:#4a6149"></span>klíčové místo</span><span><span class="dot" style="background:#8a4fbe"></span>festival</span><span><span class="dot" style="background:#2f8f9d"></span>kemp</span></div></div>
+  <div class="grid">
+    <div>
+      <h3 class="sec">Kam zajet</h3>
+      <div class="subsec">★ Must-have</div>
+      <ul class="poi"><li><b>Reine a Hamnøy (Reinefjorden)</b> — <span class="w">Ikonická rudá rorbu pod ostrými štíty; klidná vyhlídková plavba fjordem bez náročného treku.</span></li><li><b>Henningsvær</b> — <span class="w">„Benátky Lofot&quot; — umělecký rybářský přístav na ostrůvcích, galerie, kavárny, safari za orly mořskými.</span></li><li><b>Trollfjorden (plavba)</b> — <span class="w">Dramaticky úzký fjord pod kolmými stěnami; pohodlně lodí ze Svolværu, orli mořští.</span></li><li><b>Velrybí safari z Andenes</b> — <span class="w">Vysoká šance spatřit velryby u kontinentálního šelfu; klidný zážitek z paluby, sever Vesterálenu.</span></li></ul>
+      <div class="subsec gem">◆ Skryté tipy</div>
+      <ul class="poi gems"><li><b>Nyksund (Vesterálen)</b> — <span class="w">Vzkříšené město duchů, dnes kreativní útočiště s galeriemi a nejlepšími restauracemi v regionu.</span></li><li><b>Nusfjord</b> — <span class="w">Jedna z nejlépe zachovalých rybářských vesnic; muzeum pod širým nebem, 28 obyvatel, bez davů.</span></li><li><b>Pláž Unstad a Eggum</b> — <span class="w">Tichý surfařský záliv a pobřežní silnice; jedno z nejlepších míst pro půlnoční slunce.</span></li><li><b>Lyngenské Alpy a Sommarøy</b> — <span class="w">Strmé štíty nad fjordem v klidu blízko Tromsø; korálově bílé pláže ostrova Sommarøy.</span></li></ul>
+    </div>
+    <div>
+      <h3 class="sec">Kde se usadit (báze)</h3>
+      <div class="base"><div class="bname">Manndalen, Kåfjord<span class="vibe">festivalové sámské údolí u Lyngenfjordu</span></div><div class="bwhy">Kotva festivalu Riddu Riđđu; domorodá kultura, koncerty, klidné údolí, ~2 h od Tromsø.</div></div><div class="base"><div class="bname">Tromsø<span class="vibe">hipsterské univerzitní město pod horami</span></div><div class="bwhy">Arktická metropole: lanovka, fjordové plavby, skvělé seafood; návaznost na festival i letiště.</div></div><div class="base"><div class="bname">Henningsvær<span class="vibe">umělecký rybářský přístav na ostrůvcích</span></div><div class="bwhy">Nejživější tvůrčí vesnice Lofot; kavárny, galerie, plavby za orly, půlnoční slunce nad přístavem.</div></div><div class="base"><div class="bname">Reine / Hamnøy<span class="vibe">rudá rorbu pod ostrými štíty</span></div><div class="bwhy">Nejfotogeničtější kout Lofot; pobyt v rorbu, plavby Reinefjordem, klidné procházky k Bunes.</div></div><div class="base"><div class="bname">Andenes (Vesterálen)<span class="vibe">velrybí mys a půlnoční slunce</span></div><div class="bwhy">Klidnější, mírnější ostrovy; velrybí safari, vyhlídková Andøya, blízko Nyksundu.</div></div>
+    </div>
+  </div>
+  <div class="detailsec"><h3 class="sec">Rozhodovací detaily</h3><div class="details"><div class="dcard"><div class="dk">🏥 Porodnice / péče</div><div class="dv">Lofoty: porodnice (porodní asistentky) Gravdal/Leknes — jen nekomplikované. Plná OB/císař = UNN Tromsø.</div></div><div class="dcard"><div class="dk">💰 Vše-v-ceně (2 týdny)</div><div class="dv">Mid-range pár 2 týdny vč. letů ≈ 200–280 tis. Kč — nejdražší ze shortlistu.</div></div><div class="dcard"><div class="dk">📅 Rezervovat brzy</div><div class="dv">Rezervovat hned: rorbu v Reine/Hamnøy (vyprodáno do jara), auto, lety. Riddu 8.–12. 7. = ubytování v Kåfjordu napjaté.</div></div><div class="dcard"><div class="dk">🌧️ Déšť &amp; plán B</div><div class="dv">Lofoty ~15–18 deštivých dní, Tromsø ~10. Plán B: muzea, akvárium Polaria, kavárny, sauna, lehké výlety.</div></div><div class="dcard"><div class="dk">🍽️ Jídlo (těhotenství OK)</div><div class="dv">Ano. Ryby/losos vždy tepelně upravené (skvělé), brunost a běžné sýry pasterované = OK. Vyhnout: gravlax, sushi, syrové ústřice, nepasterované farmářské sýry.</div></div><div class="dcard"><div class="dk">🚗 Bez auta na začátku</div><div class="dv">Dává smysl: 2–3 dny v Tromsø bez auta (chodecké centrum, fjordová plavba z přístavu, Polaria, lanovka). Auto až na Lofoty.</div></div></div></div>
+  <div class="meta-row">
+    <div class="mi caveat"><b>Proč možná ne</b>Norsko je drahé a vzdálenosti velké — Tromsø–Lofoty znamená dlouhé přejezdy a trajekty; festivaly tu hrají druhé housle za přírodou.</div>
+    <div class="mi"><b>Babymoon poznámka</b>Chladné léto, krátké scénické túry a okruhy autem či lodí; nemocnice ve Svolværu a Gravdalu na dosah.</div>
+  </div>
+</div>
+<div class="card" data-card="faroe">
+  <div class="gallery"><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/G%C3%A1sadalur_%2851256491640%29.jpg/1280px-G%C3%A1sadalur_%2851256491640%29.jpg" alt="Vodopád Múlafossur padající z útesu do oceánu"><figcaption>Vodopád Múlafossur padající z útesu do oceánu</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Saksun%2C_Faroe_Islands_%282%29.JPG/1280px-Saksun%2C_Faroe_Islands_%282%29.JPG" alt="Drnové domky nad přílivovou lagunou"><figcaption>Drnové domky nad přílivovou lagunou</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Is03002-Torshavn.jpg/1280px-Is03002-Torshavn.jpg" alt="Staré město a přístav faerské metropole"><figcaption>Staré město a přístav faerské metropole</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/S%C3%B8rv%C3%A1gsvatn_4.jpg/1280px-S%C3%B8rv%C3%A1gsvatn_4.jpg" alt="Jezero zdánlivě visící nad hladinou moře"><figcaption>Jezero zdánlivě visící nad hladinou moře</figcaption></figure></div>
+  <div class="hl">Faerské ostrovy</div>
+  <div class="oneliner">Mlžné útesy, vodopády do moře a festival na pláži.</div>
+  <div class="ribbon"><span class="ratom"><span class="re">🌡️</span>~12 °C / ~8 °C</span><span class="ratom"><span class="re">💶</span>≈ 70–105 tis. Kč</span><span class="ratom"><span class="re">🎵</span>G! Festival</span><span class="ratom"><span class="re">⛺</span>stan: ne</span><span class="ratom"><span class="re">🗺️</span>5 bází · ~40 km</span></div>
+  <div class="topgrid">
+    <div class="tgcol"><div class="fit"><h3 class="sec">Proč vám to sedne</h3><div class="fitrow lead"><span class="ficon">🏘</span><span class="flabel">Skutečný místní život</span><span class="ftext">Drnové vesnice Saksun a Gjógv a festival na pláži v Gøtě.</span></div><div class="fitrow"><span class="ficon">🚗</span><span class="flabel">Volnost objevovat</span><span class="ftext">Autem a trajektem mezi ostrovy: každá vesnice do hodiny, Nólsoy nebo Mykines podle počasí.</span></div><div class="fitrow lead"><span class="ficon">⛰</span><span class="flabel">Příroda, kterou si dojdeš</span><span class="ftext">Vodopád Múlafossur padající do oceánu, jezero Sørvágsvatn nad mořem a útesy Kallur — dramatická příroda na dosah.</span></div><div class="fitrow"><span class="ficon">🎭</span><span class="flabel">Celý mix dohromady</span><span class="ftext">Festival na pláži, hip Tórshavn, papuchalci na Nólsoy a k tomu drnové vísky — kultura i divočina.</span></div><div class="fitrow"><span class="ficon">🍴</span><span class="flabel">Jídlo jako součást místa</span><span class="ftext">Jehněčí, čerstvé ryby a New Nordic v Tórshavnu mezi výlety na útesy.</span></div></div><div class="fests"><h3 class="sec">Festivaly v okně</h3><div class="fest anchor"><div class="fname">🎵 G! Festival <span class="sz velky">velký</span> <span class="szd">~10k</span></div><div class="fmeta">16.–18. 7. 2026 · Syðrugøta (Eysturoy)</div><div class="fblurb">Pódium na pláži, vesnice, faerské i světové kapely. <a href="https://www.gfestival.fo/" target="_blank">web ↗</a></div></div><div class="festrow"><span class="sz maly">malý</span><span class="fn">Summartónar</span><span class="fd">léto 2026; od 1. 7. faerské soubory · kostely a vesnice po souostroví</span> <a href="https://summartonar.fo/" target="_blank">↗</a></div><div class="festrow"><span class="sz velky">velký</span><span class="fn">Ólavsøka</span> <span class="szd">národní svátek</span><span class="fd">28.–29. 7. 2026 (mimo okno) · Tórshavn, celé souostroví</span> <a href="https://visitfaroeislands.com/en/whatson/events/event/st-olafs-national-celebration" target="_blank">↗</a></div></div></div>
+    <div class="tgcol"><div class="wbox"><h4 class="bxh">Počasí · začátek července</h4><div class="wtiles"><div class="wtile"><div class="we">🌡️</div><div class="wv">~12 °C</div><div class="wl">ve dne · noc ~8 °C</div></div><div class="wtile"><div class="we">🌧️</div><div class="wv">~9 / 14</div><div class="wl">deštivé dny</div></div><div class="wtile"><div class="we">🌂</div><div class="wv">~86 mm/měs</div><div class="wl">srážky</div></div><div class="wtile"><div class="we">🌅</div><div class="wv">~19 h</div><div class="wl">světlo (i soumrak)</div></div></div><div class="wcap">☀️ mlha, vítr, proměnlivo</div></div><div class="cbox"><h4 class="bxh">Náklady · bez luxusu</h4><div class="ctotal">≈ 70–105 tis. Kč<span class="ctl">/ pár / 2 týdny · letenky + auto + ubytování</span></div><table class="ctab"><tr><td class="ci">✈️</td><td class="cl">Letenka (zpát.)</td><td class="cv">~10–15 tis. Kč (přes Kodaň)</td></tr><tr><td class="ci">🚗</td><td class="cl">Auto</td><td class="cv">~70–90 €/den</td></tr><tr><td class="ci">⛺</td><td class="cl">Kemp</td><td class="cv">~13–18 €/os</td></tr><tr><td class="ci">🏨</td><td class="cl">Nocleh</td><td class="cv">guesthouse ~80–130 €</td></tr></table></div><div class="tbox"><h4 class="bxh">Cesta tam</h4><div class="trow"><span class="tk">✈️ Kam letět</span><div class="tval">Praha→Kodaň (SAS, ~1h50), přestup na Atlantic Airways Kodaň→Vágar (~2h15). Žádný přímý let.</div></div><div class="trow"><span class="tk">💶 Zpáteční letenka</span><div class="tval">~12–20 tis. Kč/os v červenci (Faerské jsou drahé; brzká rezervace klíčová)</div></div><div class="trow"><span class="tk">⏱️ Cesta tam (dveře-dveře)</span><div class="tval">Praha → Tórshavn ~8–10 h dveře-dveře (2 lety + přestup + 40 min autem tunelem)</div></div><div class="trow"><span class="tk">⚓ K festivalu / kotvě</span><div class="tval">G! v Gøtě: z Vágaru ~1–1h15 autem (2 podmořské tunely, zpoplatněné), z Tórshavnu ~45 min.</div></div><div class="tverdict">Náročná (2 přestupy, bez přímého letu) a drahá — ale na 2 týdny jednoznačně sedí.</div></div><div class="camp"><h3 class="sec">Stan / kemp</h3><div class="campstatus ne"><span class="cb"></span>Kemping: jen oficiální kempy (divoký zakázán)</div><div class="camprules">Divoký kemp je zakázán a pokutovaný — jen oficiální kempy; spaní v přírodě u silnic je nelegální.</div><div class="campspot"><b>Giljanes Camping (Vágar)</b> — Celoročně, výhledy na moře, blízko letiště i vodopádu Múlafossur.</div><div class="campspot"><b>Camping Tórshavn</b> — Kemp u oceánu s výhledem na ostrov Nólsoy, v dosahu centra.</div></div></div>
+  </div>
+  <div class="plan"><b>RYTMUS NA 2 TÝDNY · </b>Týden 1 jedna základna (Tórshavn nebo centrální Gjógv) pro mírné výlety a trajektové skoky mezi ostrovy (Nólsoy, Mykines, Sandoy); týden 2 přesun na sever (Klaksvík) plus festivalové dny v Gøtě — vše do hodiny jízdy.</div>
+  <div class="mapsec"><h3 class="sec">Mapa — rozložení míst</h3><div class="cardmap" id="map-faroe"></div><div class="maplegend"><span><span class="dot" style="background:#c0822c"></span>báze</span><span><span class="dot" style="background:#4a6149"></span>klíčové místo</span><span><span class="dot" style="background:#8a4fbe"></span>festival</span><span><span class="dot" style="background:#2f8f9d"></span>kemp</span></div></div>
+  <div class="grid">
+    <div>
+      <h3 class="sec">Kam zajet</h3>
+      <div class="subsec">★ Must-have</div>
+      <ul class="poi"><li><b>Múlafossur a Gásadalur</b> — <span class="w">Vodopád padající z útesu rovnou do oceánu nad drnovou vesnicí — ikona Faerských ostrovů.</span></li><li><b>Sørvágsvatn (jezero nad oceánem)</b> — <span class="w">Jezero, které z útesu vypadá, jako by viselo vysoko nad mořem (optický klam); mírná procházka.</span></li><li><b>Saksun</b> — <span class="w">Drnové domky nad přílivovou lagunou v amfiteátru hor; nejfotografovanější vesnice.</span></li><li><b>Kallur (Kalsoy) / Tjørnuvík</b> — <span class="w">Dramatické útesy a maják na Kalsoy; černá pláž a mořské skály z Tjørnuvíku.</span></li></ul>
+      <div class="subsec gem">◆ Skryté tipy</div>
+      <ul class="poi gems"><li><b>Elduvík</b> — <span class="w">Černé drnové chalupy v zapadlém koutě Eysturoye; pocit konce světa a hluboký klid.</span></li><li><b>Nólsoy</b> — <span class="w">Krátký trajekt z Tórshavnu, papuchalci bez davů, autentická vesnice — klidná alternativa k Mykines.</span></li><li><b>Gjógv</b> — <span class="w">Barevné domky a přírodní mořská rokle; idylický přístav na severu Eysturoye.</span></li><li><b>Viðareiði</b> — <span class="w">Nejsevernější vesnice; ohromující vyhlídka na Kunoy, kouzelná za zlatého světla, mírná procházka.</span></li></ul>
+    </div>
+    <div>
+      <h3 class="sec">Kde se usadit (báze)</h3>
+      <div class="base"><div class="bname">Tórshavn<span class="vibe">malá hip metropole</span></div><div class="bwhy">Tinganes s drnovými střechami, artsy přístav, kavárny a špičkové jídlo; ideální základna pro Streymoy a trajekty.</div></div><div class="base"><div class="bname">Gøta / Syðrugøta<span class="vibe">festivalové srdce u moře</span></div><div class="bwhy">Hostitelská vesnice G! Festivalu (16.–18. 7.) mezi útesy; intimní atmosféra, koncerty do noci.</div></div><div class="base"><div class="bname">Gjógv (Eysturoy)<span class="vibe">vesnice u mořské rokle</span></div><div class="bwhy">Klidná barevná vesnice, výborná centrální základna — každý ostrov do hodiny jízdy autem.</div></div><div class="base"><div class="bname">Klaksvík<span class="vibe">rybářský přístav</span></div><div class="bwhy">Druhé největší město, srdce severních ostrovů; brána k Viðareiði, Kalsoy a Kallur.</div></div><div class="base"><div class="bname">Saksun / Vágar<span class="vibe">drnové domky nad lagunou</span></div><div class="bwhy">Vágar blízko letiště a Múlafossuru; Saksun pro dramatickou scenérii a ticho mimo dav.</div></div>
+    </div>
+  </div>
+  <div class="detailsec"><h3 class="sec">Rozhodovací detaily</h3><div class="details"><div class="dcard"><div class="dk">🏥 Porodnice / péče</div><div class="dv">Ano — Landssjúkrahúsið v Tórshavnu má porodnici. Z odlehlých ostrovů přesun trvá: plánuj základny blízko Tórshavnu.</div></div><div class="dcard"><div class="dk">💰 Vše-v-ceně (2 týdny)</div><div class="dv">Zhruba 110–150 tis. Kč na pár: ubytování ~55 tis., jídlo ~25 tis., auto+palivo+tunelová mýta ~35 tis.</div></div><div class="dcard"><div class="dk">📅 Rezervovat brzy</div><div class="dv">Rezervovat hned: G! vstupenky (jen pár tisíc lidí), ubytování v Gøtě/Tórshavnu (málo kapacit), půjčovnu aut — kolem festivalu rychle mizí.</div></div><div class="dcard"><div class="dk">🌧️ Déšť &amp; plán B</div><div class="dv">Vysoké — ~18–19 deštivých dní + častá mlha i v červenci. Plán B: muzea, bazény, kavárny v Tórshavnu, krátké přestávky mezi přeháňkami.</div></div><div class="dcard"><div class="dk">🍽️ Jídlo (těhotenství OK)</div><div class="dv">Ano, skvěle i bezpečně: jehněčí, čerstvá treska/losos (vařené), rybí polévka, pečivo. Vyhnout: velrybí maso (rtuť/PCB), syrové ryby, fermentovaný ræstur, nepasterované sýry.</div></div><div class="dcard"><div class="dk">🚗 Bez auta na začátku</div><div class="dv">Ano, část dává smysl. Tórshavn chodecký, městské busy zdarma; modré busy + lodě (Strandfaraskip). Začít bez auta v Tórshavnu, auto na výlety a festival.</div></div></div></div>
+  <div class="meta-row">
+    <div class="mi caveat"><b>Proč možná ne</b>Drsno a mlha (~12 °C), divoký kemp zakázán a letenky přes Kodaň patří k nejdražším; na dva týdny je ostrov malý, nutno spárovat.</div>
+    <div class="mi"><b>Babymoon poznámka</b>Chladno a vítr (10–13 °C), nenáročné procházky, nemocnice a vše potřebné v Tórshavnu do hodiny.</div>
+  </div>
+</div>
+<div class="card" data-card="nw-spain-combined">
+  <div class="gallery"><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/San_Sebasti%C3%A1n_-_Ayuntamiento_10.jpg/1280px-San_Sebasti%C3%A1n_-_Ayuntamiento_10.jpg" alt="Záliv La Concha — pintxos metropole baskického pobřeží"><figcaption>Záliv La Concha — pintxos metropole baskického pobřeží</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Museo_Guggenheim%2C_Bilbao_%2831273245344%29.jpg/1280px-Museo_Guggenheim%2C_Bilbao_%2831273245344%29.jpg" alt="Gehryho titanová loď nad řekou Nervión"><figcaption>Gehryho titanová loď nad řekou Nervión</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Lago_Ercina_2015.jpg/1280px-Lago_Ercina_2015.jpg" alt="Jezera Enol a Ercina vysoko v horách"><figcaption>Jezera Enol a Ercina vysoko v horách</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Picu_Urriellu.jpg/1280px-Picu_Urriellu.jpg" alt="Vápencové štíty národního parku Picos de Europa"><figcaption>Vápencové štíty národního parku Picos de Europa</figcaption></figure></div>
+  <div class="hl">Severní Španělsko — Baskicko + Picos de Europa</div>
+  <div class="oneliner">Pintxos a flyš na východě, vápencové štíty a jezera na západě — zelené Španělsko v jednom okruhu.</div>
+  <div class="ribbon"><span class="ratom"><span class="re">🌡️</span>~21 °C / ~14 °C</span><span class="ratom"><span class="re">💶</span>≈ 40–65 tis. Kč</span><span class="ratom"><span class="re">🎵</span>Getxo Jazz</span><span class="ratom"><span class="re">⛺</span>stan: částečně</span><span class="ratom"><span class="re">🗺️</span>6 bází · ~250 km</span></div>
+  <div class="topgrid">
+    <div class="tgcol"><div class="fit"><h3 class="sec">Proč vám to sedne</h3><div class="fitrow lead"><span class="ficon">🏘</span><span class="flabel">Skutečný místní život</span><span class="ftext">Živé rybářské vesnice Baskicka (Getaria, Elantxobe) i kamenné vísky Picos (Mogrovejo, Lastres), sidrerías a sýr z jeskyně Cabrales.</span></div><div class="fitrow"><span class="ficon">🚗</span><span class="flabel">Volnost objevovat</span><span class="ftext">Přímý let do Bilbaa, pak autem od baskického pobřeží přes ~2,5h přejezd do hor Picos — dva kraje, jeden okruh.</span></div><div class="fitrow"><span class="ficon">⛰</span><span class="flabel">Příroda, kterou si dojdeš</span><span class="ftext">Flyšové útesy Zumaii i jezera Covadonga a lanovka Fuente Dé — moře i vápencové štíty, vše nadosah.</span></div><div class="fitrow"><span class="ficon">🎭</span><span class="flabel">Celý mix dohromady</span><span class="ftext">Guggenheim a pintxos San Sebastián + Picos, Santillana a divoké pobřeží — umění, město, hory i moře.</span></div><div class="fitrow lead"><span class="ficon">🍴</span><span class="flabel">Jídlo jako součást místa</span><span class="ftext">Pintxos v Parte Vieja a ryba u Elkana v Getarii, pak fabada, mošt sidra a modrý Cabrales v horách.</span></div></div><div class="fests"><h3 class="sec">Festivaly v okně</h3><div class="fest anchor"><div class="fname">🎵 Getxo Jazz <span class="sz maly">malý</span></div><div class="fmeta">1.–5. 7. 2026 · Getxo (Biskajský záliv u Bilbaa)</div><div class="fblurb">Komorní pobřežní jazz, koncerty zdarma v ulicích i u moře. <a href="https://getxo-kultura.eus/es/getxo-jazz-2026/" target="_blank">web ↗</a></div></div><div class="festrow"><span class="sz velky">velký</span><span class="fn">Bilbao BBK Live</span> <span class="szd">~100k+</span><span class="fd">9.–11. 7. 2026 · Mount Kobetamendi, Bilbao</span> <a href="https://bilbaobbklive.com/en/" target="_blank">↗</a></div><div class="festrow"><span class="sz maly">malý</span><span class="fn">BolaoFolk</span><span class="fd">~10.–12. 7. 2026 (předběžně) · Cóbreces, Cantabria</span> <a href="https://bolaofolk.com/" target="_blank">↗</a></div><div class="festrow"><span class="sz stredni">střední</span><span class="fn">Heineken Jazzaldia</span><span class="fd">22.–26. 7. 2026 (těsně mimo okno) · San Sebastián (Donostia)</span> <a href="https://www.jazzaldia.eus/en/" target="_blank">↗</a></div></div></div>
+    <div class="tgcol"><div class="wbox"><h4 class="bxh">Počasí · začátek července</h4><div class="wtiles"><div class="wtile"><div class="we">🌡️</div><div class="wv">~21 °C</div><div class="wl">ve dne · noc ~14 °C</div></div><div class="wtile"><div class="we">🌧️</div><div class="wv">~7 / 14</div><div class="wl">deštivé dny</div></div><div class="wtile"><div class="we">🌂</div><div class="wv">atlantské přeháňky</div><div class="wl">srážky</div></div><div class="wtile"><div class="we">🌅</div><div class="wv">~15 h</div><div class="wl">světlo (i soumrak)</div></div></div><div class="wcap">☀️ vlhčí Atlantik, mírno</div></div><div class="cbox"><h4 class="bxh">Náklady · bez luxusu</h4><div class="ctotal">≈ 40–65 tis. Kč<span class="ctl">/ pár / 2 týdny · letenky + auto + ubytování</span></div><table class="ctab"><tr><td class="ci">✈️</td><td class="cl">Letenka (zpát.)</td><td class="cv">~4–7 tis. Kč (→Bilbao přímo)</td></tr><tr><td class="ci">🚗</td><td class="cl">Auto</td><td class="cv">~30–55 €/den</td></tr><tr><td class="ci">⛺</td><td class="cl">Kemp</td><td class="cv">~20–35 €/noc</td></tr><tr><td class="ci">🏨</td><td class="cl">Nocleh</td><td class="cv">pensión / casa rural ~55–90 €</td></tr></table></div><div class="tbox"><h4 class="bxh">Cesta tam</h4><div class="trow"><span class="tk">✈️ Kam letět</span><div class="tval">Praha→Bilbao (BIO) přímo (SmartWings/Vueling, ~2h45) — jen vybrané dny; jinak přes Barcelonu/Madrid.</div></div><div class="trow"><span class="tk">💶 Zpáteční letenka</span><div class="tval">~4–7 tis. Kč/os (přímý), levněji přes hub s přestupem</div></div><div class="trow"><span class="tk">⏱️ Cesta tam (dveře-dveře)</span><div class="tval">Praha → Bilbao ~6–7 h dveře-dveře (přímý let), ~9–11 h přes hub</div></div><div class="trow"><span class="tk">⚓ K festivalu / kotvě</span><div class="tval">Getxo Jazz a BBK Live prakticky u báze (Bilbao/Getxo, 0–30 min). BolaoFolk v Cóbreces ~1 h přímo na trase do Picos. Přejezd Baskicko↔Picos ~2,5 h.</div></div><div class="tverdict">Nejsnazší logistika ze shortlistu — přímý let, festivaly u báze; 2 týdny drží výborně.</div></div><div class="camp"><h3 class="sec">Stan / kemp</h3><div class="campstatus castecne"><span class="cb"></span>Kemping: částečně — hlavně oficiální kempy</div><div class="camprules">Divoký kemp ve Španělsku obecně zakázán (v NP Picos zvlášť); jen oficiální kempy — pobřeží i hory jich mají dost.</div><div class="campspot"><b>Camping Igueldo (San Sebastián)</b> — Na kopci nad zálivem, panorama, shuttle do centra k pintxos.</div><div class="campspot"><b>Camping Picos de Europa (Avín)</b> — U řeky Güeña mezi lesy pod západním masivem, ideální základna pro hory.</div></div></div>
+  </div>
+  <div class="plan"><b>RYTMUS NA 2 TÝDNY · </b>Týden 1 Baskicko (báze San Sebastián + Bilbao/Getxo festival, flysch Zumaia, Gaztelugatxe); ~2,5h přejezd na západ; týden 2 Picos (Cangas de Onís/Covadonga, Potes/Fuente Dé) a kantaberské pobřeží (BolaoFolk, San Vicente, Santillana).</div>
+  <div class="mapsec"><h3 class="sec">Mapa — rozložení míst</h3><div class="cardmap" id="map-nw-spain-combined"></div><div class="maplegend"><span><span class="dot" style="background:#c0822c"></span>báze</span><span><span class="dot" style="background:#4a6149"></span>klíčové místo</span><span><span class="dot" style="background:#8a4fbe"></span>festival</span><span><span class="dot" style="background:#2f8f9d"></span>kemp</span></div></div>
+  <div class="grid">
+    <div>
+      <h3 class="sec">Kam zajet</h3>
+      <div class="subsec">★ Must-have</div>
+      <ul class="poi"><li><b>Guggenheim Bilbao</b> — <span class="w">Gehryho titanová ikona; umělecké srdce kdysi průmyslového města, dnes kulturní velmoci.</span></li><li><b>San Sebastián – Parte Vieja &amp; La Concha</b> — <span class="w">Foodie metropole: pintxos crawl ve starém městě a k tomu jedna z nejkrásnějších městských pláží Evropy.</span></li><li><b>Flysch coast Zumaia–Deba</b> — <span class="w">60 milionů let dějin Země v dramatických útesech; geopark UNESCO, klidná procházka s vyhlídkou.</span></li><li><b>Jezera Covadonga (Enol a Ercina)</b> — <span class="w">Dvě ledovcová jezera v zelených horách, snadná okružní procházka — ikona Picos.</span></li><li><b>Lanovka Fuente Dé</b> — <span class="w">Nejdelší jednolanová kabina v Evropě, výjezd na 1823 m s velkolepým výhledem, bez túry.</span></li></ul>
+      <div class="subsec gem">◆ Skryté tipy</div>
+      <ul class="poi gems"><li><b>Getaria</b> — <span class="w">Živá rybářská vesnice; Elkano a grilovaná celá ryba, txakoli z místních vinic nad mořem.</span></li><li><b>Elantxobe</b> — <span class="w">Vesnice doslova vlepená do útesu, uličky jako schody nad vlnami; pastelové fasády, téměř bez turistů.</span></li><li><b>Mogrovejo</b> — <span class="w">Kamenná vesnička 45 obyvatel u Potes pod středověkou obrannou věží, žádný obchod, žádný provoz.</span></li><li><b>Acantilado El Bolao (Cóbreces)</b> — <span class="w">Vodopád padající z útesu do moře, jeden z nejvyšších útesů pobřeží — západy slunce.</span></li><li><b>Lastres</b> — <span class="w">Bělostná rybářská vesnice na útesu, červené střechy klesající k přístavu, vyhlídka San Roque.</span></li></ul>
+    </div>
+    <div>
+      <h3 class="sec">Kde se usadit (báze)</h3>
+      <div class="base"><div class="bname">San Sebastián<span class="vibe">foodie metropole</span></div><div class="bwhy">Gastronomické centrum, pláž La Concha, lékařská péče po ruce; ideální klidná základna na týden.</div></div><div class="base"><div class="bname">Bilbao<span class="vibe">umělecké, znovuzrozené město</span></div><div class="bwhy">Guggenheim, nábřeží, Casco Viejo; výborná infrastruktura a nemocnice, brána k Biskajskému pobřeží.</div></div><div class="base"><div class="bname">Cangas de Onís<span class="vibe">brána do Picos a Covadongy</span></div><div class="bwhy">Vstup do hor, římský most, sidrerías — ideální základna pro Covadongu a jezera.</div></div><div class="base"><div class="bname">Potes<span class="vibe">horské městečko v údolí Liébana</span></div><div class="bwhy">Dlažební uličky, orujo, brána k Fuente Dé a klášteru Santo Toribio.</div></div><div class="base"><div class="bname">San Vicente de la Barquera<span class="vibe">rybářský přístav, moře i hory</span></div><div class="bwhy">Estuár, středověký most o 28 obloucích, mořské plody, Picos na obzoru.</div></div><div class="base"><div class="bname">Santillana del Mar<span class="vibe">středověké kamenné městečko</span></div><div class="bwhy">Jedna z nejkrásnějších vesnic Španělska, karamelové domy, dlažba, blízko jeskyně Altamira.</div></div>
+    </div>
+  </div>
+  <div class="detailsec"><h3 class="sec">Rozhodovací detaily</h3><div class="details"><div class="dcard"><div class="dk">🏥 Porodnice / péče</div><div class="dv">Velké porodnice: Bilbao (Cruces), San Sebastián (Donostia), Santander. Picos řidší: z Cangas ~7 km Arriondas; z Potes ~1 h do Torrelavegy.</div></div><div class="dcard"><div class="dk">💰 Vše-v-ceně (2 týdny)</div><div class="dv">Vše-v-ceně pro pár na 14 dní vč. letů ~80–120 tis. Kč — nejlevnější ze shortlistu (Bilbao/SanSeb dráž).</div></div><div class="dcard"><div class="dk">📅 Rezervovat brzy</div><div class="dv">Brzy: hotely v San Sebastiánu (3. týden 7. = Jazzaldia, ceny nahoru), auto, Covadonga shuttle. Pintxos bary se nerezervují, restaurace ano.</div></div><div class="dcard"><div class="dk">🌧️ Déšť &amp; plán B</div><div class="dv">Zelené pobřeží: ~10–12 dní s deštěm, ale krátké přeháňky. Plán B: Guggenheim, staré město, akvárium, termály.</div></div><div class="dcard"><div class="dk">🍽️ Jídlo (těhotenství OK)</div><div class="dv">Ano, skvěle: grilované ryby/maso, tortilla, jamón, tvrdé sýry, zelenina. Vyhnout: syrové boquerones/anchovies, tatarák, nepasterovaný Cabrales (modrý).</div></div><div class="dcard"><div class="dk">🚗 Bez auta na začátku</div><div class="dv">Ano. 3–4 dny v San Sebastiánu + Bilbau bez auta (chodecká centra, vlak Euskotren/Renfe mezi nimi), auto až na Picos/Kantábrii.</div></div></div></div>
+  <div class="meta-row">
+    <div class="mi caveat"><b>Proč možná ne</b>Zelené Španělsko = atlantské přeháňky i v létě; v NP Picos divoký kemp zakázán; klidná festivalová kotva chybí (Getxo Jazz je malý, BBK Live davový).</div>
+    <div class="mi"><b>Babymoon poznámka</b>Mírné atlantské léto (~21 °C, žádné horko), velká města i horská městečka s nemocnicemi na dosah, klidné tempo bez treků.</div>
+  </div>
+</div>
+<div class="card" data-card="west-ireland">
+  <div class="gallery"><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Cliffs-Of-Moher-OBriens-From-South.JPG/1280px-Cliffs-Of-Moher-OBriens-From-South.JPG" alt="Útesy spadající 200 m do Atlantiku"><figcaption>Útesy spadající 200 m do Atlantiku</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Burren_Landscape_2.jpg/1280px-Burren_Landscape_2.jpg" alt="Měsíční vápencová krajina Co. Clare"><figcaption>Měsíční vápencová krajina Co. Clare</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Kylemore_October_2014-1a.jpg/1280px-Kylemore_October_2014-1a.jpg" alt="Opatství zrcadlící se v jezeře Connemary"><figcaption>Opatství zrcadlící se v jezeře Connemary</figcaption></figure><figure><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Boats_and_mountains%2C_Roundstone_%286047965086%29.jpg/1280px-Boats_and_mountains%2C_Roundstone_%286047965086%29.jpg" alt="Hory Twelve Bens a loďky u Roundstone"><figcaption>Hory Twelve Bens a loďky u Roundstone</figcaption></figure></div>
+  <div class="hl">Západní Irsko — Clare → Connemara → Donegal</div>
+  <div class="oneliner">Atlantský road trip s živou trad muzikou a třemi festivaly.</div>
+  <div class="ribbon"><span class="ratom"><span class="re">🌡️</span>~18 °C / ~12 °C</span><span class="ratom"><span class="re">💶</span>≈ 40–70 tis. Kč</span><span class="ratom"><span class="re">🎵</span>Scoil Samhraidh Willie Clancy</span><span class="ratom"><span class="re">⛺</span>stan: částečně</span><span class="ratom"><span class="re">🗺️</span>5 bází · ~260 km</span></div>
+  <div class="topgrid">
+    <div class="tgcol"><div class="fit"><h3 class="sec">Proč vám to sedne</h3><div class="fitrow lead"><span class="ficon">🏘</span><span class="flabel">Skutečný místní život</span><span class="ftext">Hospodské trad session ve Willie Clancy a tkalcovská Ardara — hudba a život místních.</span></div><div class="fitrow"><span class="ficon">🚗</span><span class="flabel">Volnost objevovat</span><span class="ftext">Autem od Clare po Donegal: útesy, pláže i přílivový Omey Island podle odlivu.</span></div><div class="fitrow"><span class="ficon">⛰</span><span class="flabel">Příroda, kterou si dojdeš</span><span class="ftext">Cliffs of Moher, měsíční Burren a útesy Slieve League — pobřeží, které si vyšlápnete.</span></div><div class="fitrow lead"><span class="ficon">🎭</span><span class="flabel">Celý mix dohromady</span><span class="ftext">Tři festivaly, hipster Galway, divoký Donegal a k tomu pláže a hory — vše na jednom okruhu.</span></div><div class="fitrow"><span class="ficon">🍴</span><span class="flabel">Jídlo jako součást místa</span><span class="ftext">Galwayské ústřice, soda bread a pinta Guinness mezi session — jídlo jako součást muziky.</span></div></div><div class="fests"><h3 class="sec">Festivaly v okně</h3><div class="fest anchor"><div class="fname">🎵 Scoil Samhraidh Willie Clancy <span class="sz stredni">střední</span> <span class="szd">(škola trad. hudby)</span></div><div class="fmeta">4.–12. 7. 2026 · Miltown Malbay, Co. Clare</div><div class="fblurb">Legendární letní škola irské tradiční hudby a tance. <a href="https://www.scoilsamhraidhwillieclancy.com/" target="_blank">web ↗</a></div></div><div class="festrow"><span class="sz velky">velký</span><span class="fn">Galway International Arts Festival</span> <span class="szd">~250k</span><span class="fd">13.–26. 7. 2026 · Galway</span> <a href="https://www.giaf.ie/" target="_blank">↗</a></div><div class="festrow"><span class="sz stredni">střední</span><span class="fn">Earagail Arts Festival</span><span class="fd">10.–25. 7. 2026 · napříč Co. Donegal</span> <a href="https://eaf.ie/" target="_blank">↗</a></div><div class="festrow"><span class="sz maly">malý</span><span class="fn">Féile sean-nóis na Gaillimhe</span><span class="fd">~10.–13. 7. 2026 (předběžně) · Galway / Connemara</span> <a href="https://arasnangael.ie/" target="_blank">↗</a></div><div class="festrow"><span class="sz maly">malý</span><span class="fn">Ceol na Coille Summer School</span><span class="fd">13.–17. 7. 2026 · Letterkenny, Co. Donegal</span> <a href="https://ceolnacoille.ie/summerschool/" target="_blank">↗</a></div></div></div>
+    <div class="tgcol"><div class="wbox"><h4 class="bxh">Počasí · začátek července</h4><div class="wtiles"><div class="wtile"><div class="we">🌡️</div><div class="wv">~18 °C</div><div class="wl">ve dne · noc ~12 °C</div></div><div class="wtile"><div class="we">🌧️</div><div class="wv">~10 / 14</div><div class="wl">deštivé dny</div></div><div class="wtile"><div class="we">🌂</div><div class="wv">~85 mm</div><div class="wl">srážky</div></div><div class="wtile"><div class="we">🌅</div><div class="wv">~17 h</div><div class="wl">světlo (i soumrak)</div></div></div><div class="wcap">☀️ proměnlivo, mírno</div></div><div class="cbox"><h4 class="bxh">Náklady · bez luxusu</h4><div class="ctotal">≈ 40–70 tis. Kč<span class="ctl">/ pár / 2 týdny · letenky + auto + ubytování</span></div><table class="ctab"><tr><td class="ci">✈️</td><td class="cl">Letenka (zpát.)</td><td class="cv">~2,5–4 tis. Kč (→Dublin)</td></tr><tr><td class="ci">🚗</td><td class="cl">Auto</td><td class="cv">~40–60 €/den</td></tr><tr><td class="ci">⛺</td><td class="cl">Kemp</td><td class="cv">~20–35 €/noc</td></tr><tr><td class="ci">🏨</td><td class="cl">Nocleh</td><td class="cv">B&amp;B/penzion ~80–130 €</td></tr></table></div><div class="tbox"><h4 class="bxh">Cesta tam</h4><div class="trow"><span class="tk">✈️ Kam letět</span><div class="tval">Praha→Dublin (DUB) přímo (Ryanair/Aer Lingus, ~2h50). Shannon blíž Clare, ale jen s přestupem.</div></div><div class="trow"><span class="tk">💶 Zpáteční letenka</span><div class="tval">~3–4 tis. Kč/os (Ryanair, včasný booking)</div></div><div class="trow"><span class="tk">⏱️ Cesta tam (dveře-dveře)</span><div class="tval">Praha → Co. Clare (Doolin/Miltown Malbay) ~7–8 h dveře-dveře (let 3 h + auto Dublin→Clare ~3 h)</div></div><div class="trow"><span class="tk">⚓ K festivalu / kotvě</span><div class="tval">Willie Clancy: Dublin→Miltown Malbay ~3 h autem (M7/M18). Shannon ~45 min, ale bez přímého letu.</div></div><div class="tverdict">Snadná cesta (přímý let), ale přejezd z dublinského letiště sežere ~3 h autem.</div></div><div class="camp"><h3 class="sec">Stan / kemp</h3><div class="campstatus castecne"><span class="cb"></span>Kemping: částečně — hlavně oficiální kempy</div><div class="camprules">Divoký kemp jen se svolením majitele pozemku; jinak oficiální kempy podél pobřeží.</div><div class="campspot"><b>Clifden Eco Beach Camping (Connemara)</b> — Eko-kemp s vlastní pláží a výhledem na Wild Atlantic Way.</div><div class="campspot"><b>Portsalon, Fanad (Donegal)</b> — Klidné odlehlé místo blízko Blue Flag pláže na poloostrově Fanad.</div></div></div>
+  </div>
+  <div class="plan"><b>RYTMUS NA 2 TÝDNY · </b>Týden 1 báze Doolin/Miltown Malbay (festival + Burren + útesy), poté 4 dny Galway/Clifden v Connemaře a poslední 3 dny Donegal (Dunfanaghy/Ardara) cestou na sever.</div>
+  <div class="mapsec"><h3 class="sec">Mapa — rozložení míst</h3><div class="cardmap" id="map-west-ireland"></div><div class="maplegend"><span><span class="dot" style="background:#c0822c"></span>báze</span><span><span class="dot" style="background:#4a6149"></span>klíčové místo</span><span><span class="dot" style="background:#8a4fbe"></span>festival</span><span><span class="dot" style="background:#2f8f9d"></span>kemp</span></div></div>
+  <div class="grid">
+    <div>
+      <h3 class="sec">Kam zajet</h3>
+      <div class="subsec">★ Must-have</div>
+      <ul class="poi"><li><b>Cliffs of Moher</b> — <span class="w">Ikonické 214 m vysoké útesy nad Atlantikem; pohodlná procházka po hřebeni, nezapomenutelný západ slunce.</span></li><li><b>Burren</b> — <span class="w">Surová měsíční krajina vápence s divokými květy; mírné procházky po Green Roads a tajemné dolmeny.</span></li><li><b>Connemara NP &amp; Sky Road</b> — <span class="w">Jezera, hory a vyhlídková smyčka u Cliftenu, kde se snoubí moře, nebe a kopce.</span></li><li><b>Slieve League</b> — <span class="w">Jedny z nejvyšších mořských útesů Evropy v Donegalu; dramatické výhledy z dobře přístupné vyhlídky.</span></li></ul>
+      <div class="subsec gem">◆ Skryté tipy</div>
+      <ul class="poi gems"><li><b>Dog&#x27;s Bay &amp; Gurteen, Roundstone</b> — <span class="w">Dvě podkovovité pláže z drcených mušlí, bílý písek tropického odstínu, klid mimo davy.</span></li><li><b>Omey Island, Claddaghduff</b> — <span class="w">Přílivový ostrov dostupný za odlivu pěšky; opuštěné pláže a vzácný pocit naprostého ticha.</span></li><li><b>Fanore Beach &amp; Black Head</b> — <span class="w">Dlouhá písečná pláž s dunami a výhledem na Aranské ostrovy, vápencové terasy nad mořem.</span></li><li><b>Ballymastocker Beach, Portsalon</b> — <span class="w">Zlatá pláž v Donegalu řazená mezi nejkrásnější na světě; ospalá zátoka mimo trasu.</span></li></ul>
+    </div>
+    <div>
+      <h3 class="sec">Kde se usadit (báze)</h3>
+      <div class="base"><div class="bname">Doolin / Miltown Malbay<span class="vibe">trad-music vesnice u Atlantiku</span></div><div class="bwhy">Srdce Willie Clancy Summer School; nonstop session v hospodách, krok od útesů Moher a Burrenu.</div></div><div class="base"><div class="bname">Galway<span class="vibe">hipster univerzitní přístav</span></div><div class="bwhy">Umělecká, hudbou žijící metropole se špičkovým jídlem; pohodlná báze pro Burren i Connemaru.</div></div><div class="base"><div class="bname">Clifden<span class="vibe">půvabné rybářské městečko Connemary</span></div><div class="bwhy">Hlavní město Connemary; Sky Road, pláže, jezera a hory na dosah, útulné hospůdky.</div></div><div class="base"><div class="bname">Dunfanaghy<span class="vibe">divoký kouzelný Donegal u moře</span></div><div class="bwhy">Jedna z nejhezčích donegalských vesnic; pláže, Horn Head, Glenveagh a Earagail Arts nablízku.</div></div><div class="base"><div class="bname">Ardara<span class="vibe">tvídová řemeslná vesnička</span></div><div class="bwhy">Tradiční tkalcovská obec u pláže Maghera, mořských jeskyní a vodopádu Assaranca; živé trad session.</div></div>
+    </div>
+  </div>
+  <div class="detailsec"><h3 class="sec">Rozhodovací detaily</h3><div class="details"><div class="dcard"><div class="dk">🏥 Porodnice / péče</div><div class="dv">Galway University Hospital — porodnice 24/7; z Doolinu ~45–60 min autem. Connemara/Donegal odlehlé, k OB péči klidně 1,5–2 h.</div></div><div class="dcard"><div class="dk">💰 Vše-v-ceně (2 týdny)</div><div class="dv">Páru na 2 týdny realisticky ~130–180 tis. Kč (ubytování, restaurace, auto + palivo). Irsko patří k dražším.</div></div><div class="dcard"><div class="dk">📅 Rezervovat brzy</div><div class="dv">Brzy: ubytování na Willie Clancy (4.–12. 7., Miltown rychle plno), letní B&amp;B v Connemaře/Donegalu, půjčovnu aut — vše vyprodává.</div></div><div class="dcard"><div class="dk">🌧️ Déšť &amp; plán B</div><div class="dv">Vysoké — Galway v červenci ~16 deštivých dní. Plán B: trad hudba v hospodách, muzea, Kylemore Abbey, kavárny.</div></div><div class="dcard"><div class="dk">🍽️ Jídlo (těhotenství OK)</div><div class="dv">Ano, skvěle i bezpečně: seafood chowder, sodový chléb, plně vařené slávky/krevety, pasterované sýry. Vyhnout: syrové ústřice, nepasterované sýry.</div></div><div class="dcard"><div class="dk">🚗 Bez auta na začátku</div><div class="dv">Ano: vlak Dublin→Galway (~2,5 h), 2–3 dny pěšky v Galway + denní výlety busem (Clifden, Cliffs). Pak auto na Connemaru/Clare/Donegal.</div></div></div></div>
+  <div class="meta-row">
+    <div class="mi caveat"><b>Proč možná ne</b>Nejdeštivější volba (~10 dní ze 14); velký Galway Arts (~250k) může přetížit město a divoký kemp je jen se svolením majitele.</div>
+    <div class="mi"><b>Babymoon poznámka</b>Mírné atlantské počasí bez horka, krátké procházky z pohodlných základen, města a nemocnice po cestě — nízká zátěž.</div>
+  </div>
+</div></div>
+</div>
+<footer>
+  Festival = kotva trasy · auto na 2 týdny · u každé karty kam zajet (must-have + skryté tipy) a kde se usadit · fotky z Wikimedia Commons.
+  Generováno 2026-06-07 · zdroj dat <code>babymoon-site/cards.json</code> · rebuild <code>python3 build.py</code>.
+</footer>
+<script>window.MAPDATA = {"north-norway-helgeland": [{"lat": 66.5571596, "lng": 11.9193084, "label": "Træna · festivalový ostrov", "type": "base"}, {"lat": 66.0215451, "lng": 12.6317232, "label": "Sandnessjøen · pod Sedmi sestrami", "type": "base"}, {"lat": 65.4748755, "lng": 12.2116394, "label": "Brønnøysund · brána Helgelandu", "type": "base"}, {"lat": 66.363733, "lng": 12.3383562, "label": "Lovund · ptačí ostrov", "type": "base"}, {"lat": 67.2844313, "lng": 14.3817503, "label": "Bodø · město + letiště", "type": "base"}, {"lat": 65.92, "lng": 12.62, "label": "Pásmo Sedmi sester vystupující z moře", "type": "sight"}, {"lat": 65.39833333, "lng": 12.08972222, "label": "Hora s přírodním tunelem skrz vrchol", "type": "sight"}, {"lat": 65.65, "lng": 11.92, "label": "Souostroví Vega na seznamu UNESCO", "type": "sight"}, {"lat": 66.3641, "lng": 12.3372, "label": "Ptačí ostrov s koloniemi papuchalků", "type": "sight"}, {"lat": 67.2844313, "lng": 14.3817503, "label": "🎵 Parkenfestivalen", "type": "fest"}, {"lat": 66.3110969, "lng": 14.1386991, "label": "🎵 Verket Festival", "type": "fest"}, {"lat": 65.67, "lng": 11.92, "label": "⛺ Pláže na Vega / Dønna", "type": "camp"}, {"lat": 65.3997, "lng": 12.0986, "label": "⛺ Okolí Torghattenu", "type": "camp"}], "north-norway": [{"lat": 69.5309375, "lng": 20.5481304, "label": "Manndalen, Kåfjord · festivalové sámské údolí u Lyngenfjordu", "type": "base"}, {"lat": 69.6516345, "lng": 18.9558585, "label": "Tromsø · hipsterské univerzitní město pod horami", "type": "base"}, {"lat": 68.152888, "lng": 14.2007245, "label": "Henningsvær · umělecký rybářský přístav na ostrůvcích", "type": "base"}, {"lat": 67.9324675, "lng": 13.0887684, "label": "Reine / Hamnøy · rudá rorbu pod ostrými štíty", "type": "base"}, {"lat": 69.3189922, "lng": 16.1225659, "label": "Andenes (Vesterálen) · velrybí mys a půlnoční slunce", "type": "base"}, {"lat": 67.9324, "lng": 13.0887, "label": "Rybářská vesnice mezi fjordem a štíty", "type": "sight"}, {"lat": 68.1529, "lng": 14.2008, "label": "Přístav rozprostřený přes ostrůvky", "type": "sight"}, {"lat": 67.9458, "lng": 13.133, "label": "Rudé rorbu chýše pod horami", "type": "sight"}, {"lat": 68.3628, "lng": 14.9361, "label": "Úzký fjord se strmými stěnami", "type": "sight"}, {"lat": 69.5309375, "lng": 20.5481304, "label": "🎵 Riddu Riđđu", "type": "fest"}, {"lat": 69.6325275, "lng": 18.9062274, "label": "🎵 Bukta Tromsø Open Air", "type": "fest"}, {"lat": 68.0769487, "lng": 13.0962871, "label": "⛺ Kvalvika Beach (Lofoty)", "type": "camp"}, {"lat": 67.9699337, "lng": 13.1104237, "label": "⛺ Bunes Beach (Moskenesøya)", "type": "camp"}], "faroe": [{"lat": 62.0101396, "lng": -6.7715709, "label": "Tórshavn · malá hip metropole", "type": "base"}, {"lat": 62.1781257, "lng": -6.7644923, "label": "Gøta / Syðrugøta · festivalové srdce u moře", "type": "base"}, {"lat": 62.3257427, "lng": -6.9430295, "label": "Gjógv (Eysturoy) · vesnice u mořské rokle", "type": "base"}, {"lat": 62.2254921, "lng": -6.5837755, "label": "Klaksvík · rybářský přístav", "type": "base"}, {"lat": 62.2442303, "lng": -7.1712467, "label": "Saksun / Vágar · drnové domky nad lagunou", "type": "base"}, {"lat": 62.11222222, "lng": -7.43472222, "label": "Vodopád Múlafossur padající z útesu do oceánu", "type": "sight"}, {"lat": 62.24888889, "lng": -7.17583333, "label": "Drnové domky nad přílivovou lagunou", "type": "sight"}, {"lat": 62.01166667, "lng": -6.7675, "label": "Staré město a přístav faerské metropole", "type": "sight"}, {"lat": 62.05, "lng": -7.23333333, "label": "Jezero zdánlivě visící nad hladinou moře", "type": "sight"}, {"lat": 62.1856882, "lng": -6.7559031, "label": "🎵 G! Festival", "type": "fest"}, {"lat": 62.0898985, "lng": -7.2345841, "label": "⛺ Giljanes Camping (Vágar)", "type": "camp"}, {"lat": 62.0172969, "lng": -6.7550841, "label": "⛺ Camping Tórshavn", "type": "camp"}], "nw-spain-combined": [{"lat": 43.3224219, "lng": -1.9838889, "label": "San Sebastián · foodie metropole", "type": "base"}, {"lat": 43.2630018, "lng": -2.9350039, "label": "Bilbao · umělecké, znovuzrozené město", "type": "base"}, {"lat": 43.3136138, "lng": -5.0658503, "label": "Cangas de Onís · brána do Picos a Covadongy", "type": "base"}, {"lat": 43.1536831, "lng": -4.623428, "label": "Potes · horské městečko v údolí Liébana", "type": "base"}, {"lat": 43.38318, "lng": -4.40027, "label": "San Vicente de la Barquera · rybářský přístav, moře i hory", "type": "base"}, {"lat": 43.3906511, "lng": -4.108048, "label": "Santillana del Mar · středověké kamenné městečko", "type": "base"}, {"lat": 43.32138889, "lng": -1.98555556, "label": "Záliv La Concha — pintxos metropole baskického pobřeží", "type": "sight"}, {"lat": 43.26861111, "lng": -2.93388889, "label": "Gehryho titanová loď nad řekou Nervión", "type": "sight"}, {"lat": 43.27527778, "lng": -4.98527778, "label": "Jezera Enol a Ercina vysoko v horách", "type": "sight"}, {"lat": 43.2, "lng": -4.8, "label": "Vápencové štíty národního parku Picos de Europa", "type": "sight"}, {"lat": 43.3431164, "lng": -3.0078627, "label": "🎵 Getxo Jazz", "type": "fest"}, {"lat": 43.2549, "lng": -2.958, "label": "🎵 Bilbao BBK Live", "type": "fest"}, {"lat": 43.3848811, "lng": -4.2111661, "label": "🎵 BolaoFolk", "type": "fest"}, {"lat": 43.3224219, "lng": -1.9838889, "label": "🎵 Heineken Jazzaldia", "type": "fest"}, {"lat": 43.3041311, "lng": -2.045424, "label": "⛺ Camping Igueldo (San Sebastián)", "type": "camp"}, {"lat": 43.3337832, "lng": -4.9478987, "label": "⛺ Camping Picos de Europa (Avín)", "type": "camp"}], "west-ireland": [{"lat": 53.0163287, "lng": -9.3776097, "label": "Doolin / Miltown Malbay · trad-music vesnice u Atlantiku", "type": "base"}, {"lat": 53.2744122, "lng": -9.0490601, "label": "Galway · hipster univerzitní přístav", "type": "base"}, {"lat": 53.4884916, "lng": -10.0210673, "label": "Clifden · půvabné rybářské městečko Connemary", "type": "base"}, {"lat": 55.1833879, "lng": -7.9717773, "label": "Dunfanaghy · divoký kouzelný Donegal u moře", "type": "base"}, {"lat": 54.7636255, "lng": -8.4105918, "label": "Ardara · tvídová řemeslná vesnička", "type": "base"}, {"lat": 52.97175056, "lng": -9.42633389, "label": "Útesy spadající 200 m do Atlantiku", "type": "sight"}, {"lat": 53.00777778, "lng": -9.00222222, "label": "Měsíční vápencová krajina Co. Clare", "type": "sight"}, {"lat": 53.5617067, "lng": -9.8894343, "label": "Opatství zrcadlící se v jezeře Connemary", "type": "sight"}, {"lat": 53.5, "lng": -9.81, "label": "Hory Twelve Bens a loďky u Roundstone", "type": "sight"}, {"lat": 52.8556213, "lng": -9.4005986, "label": "🎵 Scoil Samhraidh Willie Clancy", "type": "fest"}, {"lat": 53.2744122, "lng": -9.0490601, "label": "🎵 Galway International Arts Festival", "type": "fest"}, {"lat": 53.2594647, "lng": -9.6042345, "label": "🎵 Féile sean-nóis na Gaillimhe", "type": "fest"}, {"lat": 54.9517941, "lng": -7.7354368, "label": "🎵 Ceol na Coille Summer School", "type": "fest"}, {"lat": 53.5236034, "lng": -10.1339456, "label": "⛺ Clifden Eco Beach Camping (Connemara)", "type": "camp"}, {"lat": 54.6537924, "lng": -8.1102616, "label": "⛺ Portsalon, Fanad (Donegal)", "type": "camp"}]};</script>
+<script>
+var _maps = {};
+function fitNow(id){
+  var m=_maps[id]; if(!m||!m._bnds) return;
+  m.invalidateSize();
+  if(m._bnds.length>1){ m.fitBounds(m._bnds,{padding:[34,34], maxZoom:11}); }
+  else { m.setView(m._bnds[0], 9); }
+}
+function ensureMap(id){
+  var el = document.getElementById('map-'+id);
+  if(!el) return;
+  if(_maps[id]){ setTimeout(function(){fitNow(id);}, 80); return; }
+  var d = (window.MAPDATA||{})[id];
+  if(!d || !d.length) return;
+  var m = L.map(el, {scrollWheelZoom:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap', maxZoom:17}).addTo(m);
+  L.control.scale({imperial:false}).addTo(m);
+  var COL={base:'#c0822c', sight:'#4a6149', fest:'#8a4fbe', camp:'#2f8f9d'};
+  var RAD={base:8, sight:5, fest:7, camp:6};
+  var bounds=[];
+  d.forEach(function(p){
+    var mk = L.circleMarker([p.lat,p.lng],{radius: RAD[p.type]||5, color:'#fff', weight:2,
+      fillColor: COL[p.type]||'#4a6149', fillOpacity:1}).addTo(m);
+    mk.bindTooltip(p.label,{direction:'top'});
+    if(p.type!=='fest') bounds.push([p.lat,p.lng]); // festivals don't expand the trip footprint
+  });
+  if(!bounds.length){ d.forEach(function(p){bounds.push([p.lat,p.lng]);}); }
+  m._bnds = bounds;
+  _maps[id]=m;
+  setTimeout(function(){fitNow(id);}, 130);
+}
+function showTab(d){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.dir===d));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('active',p.dataset.dir===d));
+  var pane=document.querySelector('.tabpane[data-dir="'+d+'"]');
+  var act=pane && pane.querySelector('.card.active');
+  if(act) ensureMap(act.dataset.card);
+}
+function showCard(d,id){
+  var pane=document.querySelector('.tabpane[data-dir="'+d+'"]');
+  pane.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active',p.dataset.card===id));
+  pane.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',c.dataset.card===id));
+  ensureMap(id);
+}
+</script>
+<script>ensureMap('north-norway-helgeland');</script>
+</body></html>
